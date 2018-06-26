@@ -21,18 +21,21 @@ func main() {
 
 	destinationDir := os.Args[1]
 
-	var request in.InRequest
+	var request in.Request
 	inputRequest(&request)
 
-	awsConfig := s3resource.NewAwsConfig(
-		request.Source.AccessKeyID,
-		request.Source.SecretAccessKey,
-		request.Source.SessionToken,
-		request.Source.RegionName,
-		request.Source.Endpoint,
-		request.Source.DisableSSL,
-		request.Source.SkipSSLVerification,
-	)
+	b := s3resource.AwsConfigBuilder{
+		AccessKey: request.Source.AccessKeyID,
+		SecretKey: request.Source.SecretAccessKey,
+		SessionToken: request.Source.SessionToken,
+		RegionName: request.Source.RegionName,
+		Endpoint: request.Source.Endpoint,
+		DisableSSL: request.Source.DisableSSL,
+		SkipSSLVerification: request.Source.SkipSSLVerification,
+		AssumeRoleArn: request.Source.AssumeRoleArn,
+	}
+
+	awsConfig := b.Build()
 
 	if len(request.Source.CloudfrontURL) != 0 {
 		cloudfrontUrl, err := url.ParseRequestURI(request.Source.CloudfrontURL)
@@ -56,7 +59,7 @@ func main() {
 		request.Source.UseV2Signing,
 	)
 
-	command := in.NewInCommand(client)
+	command := in.NewCommand(client)
 
 	response, err := command.Run(destinationDir, request)
 	if err != nil {
@@ -66,13 +69,13 @@ func main() {
 	outputResponse(response)
 }
 
-func inputRequest(request *in.InRequest) {
+func inputRequest(request *in.Request) {
 	if err := json.NewDecoder(os.Stdin).Decode(request); err != nil {
 		s3resource.Fatal("reading request from stdin", err)
 	}
 }
 
-func outputResponse(response in.InResponse) {
+func outputResponse(response in.Response) {
 	if err := json.NewEncoder(os.Stdout).Encode(response); err != nil {
 		s3resource.Fatal("writing response to stdout", err)
 	}

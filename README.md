@@ -7,14 +7,13 @@ version numbers.
 
 * `bucket`: *Required.* The name of the bucket.
 
-* `access_key_id`: *Optional.* The AWS access key to use when accessing the
-  bucket.
+* `access_key_id`: *Optional.* The AWS access key to use when accessing the bucket.
 
-* `secret_access_key`: *Optional.* The AWS secret key to use when accessing
-  the bucket.
+* `secret_access_key`: *Optional.* The AWS secret key to use when accessing the bucket.
 
-* `session_token`: *Optional.* The AWS STS session token to use when
-  accessing the bucket.
+* `session_token`: *Optional.* The AWS STS session token to use when accessing the bucket.
+
+* `assume_role_arn`: *Optional.* To assume role after authentication, provide the role ARN here.
 
 * `region_name`: *Optional.* The region the bucket is in. Defaults to
   `us-east-1`.
@@ -45,6 +44,16 @@ version numbers.
 
 * `use_v2_signing`: *Optional.* Use signature v2 signing, useful for S3 compatible providers that do not support v4.
 
+### Authentication
+
+This resource will attempt to authenticate with these methods in order:
+
+1. `access_key_id` and `secret_access_key`
+2. `session_token`
+3. EC2 Role (if concourse is running on AWS)
+
+If `assume_role` is provided, it will then attempt to assume role using the above credentials that are valid.
+
 ### File Names
 
 One of the following two options must be specified:
@@ -62,6 +71,22 @@ One of the following two options must be specified:
   you can keep the file name the same and upload new versions of your file
   without resorting to version numbers. This property is the path to the file
   in your S3 bucket.
+
+### Initial state
+
+If no resource versions exist you can set up this resource to emit an initial version with a specified content. This won't create a real resource in S3 but only create an initial version for Concourse. The resource file will be created as usual when you `get` a resource with an initial version.
+
+You can define one of the following two options:
+
+* `initial_path`: *Optional.* Must be used with the `regexp` option. You should set this to the file path containing the initial version which would match the given regexp. E.g. if `regexp` is `file/build-(.*).zip`, then `initial_path` might be `file/build-0.0.0.zip`. The resource version will be `0.0.0` in this case.
+
+* `initial_version`: *Optional.* Must be used with the `versioned_file` option. This will be the resource version.
+
+By default the resource file will be created with no content when `get` runs. You can set the content by using one of the following options:
+
+* `initial_content_text`: *Optional.* Initial content as a string.
+
+* `initial_content_binary`: *Optional.* You can pass binary content as a base64 encoded string.
 
 ## Behavior
 
@@ -85,7 +110,7 @@ Places the following files in the destination:
 
 #### Parameters
 
-* `unpack`: *Optional.* If true and the file is an archive (tar, gzipped tar, other gzipped file, or zip), unpack the file. Gzipped tarballs will be both ungzipped and untarred.
+* `unpack`: *Optional.* If true and the file is an archive (tar, gzipped tar, other gzipped file, or zip), unpack the file. Gzipped tarballs will be both ungzipped and untarred. It is ignored when `get` is running on the initial version.
 
 
 ### `out`: Upload an object to the bucket.
